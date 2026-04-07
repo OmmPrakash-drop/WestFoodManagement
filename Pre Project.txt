@@ -1,0 +1,30 @@
+Project Idea:
+
+Backend
+Database Logic
+Backend APIs (Flask/ Spring Boot)
+Authentication
+Core workflow (post food, request food)
+
+
+2. Frontend Planning
+List frontend pages  (Login/register, restaurant dashboard, add surplus, NGO dashboard, request food, admin dashboard)
+Decide form fields
+Draw rough UI
+
+3. Minimal Frontend (When Backend Works)
+simple HTML forms
+connect using fetch/ AJAX
+not styling now. functionality first
+
+4. Full frontend (After everything works)
+add design element and solve the frontend bugs.
+
+- proper admin pannel.
+=----------------------------------------------------------
+- Resturants need to be authorized by the admin.
+
+- Resturant should ne authorized by the admin before getting a proper account to post food surplus. The resturant and ngo both have to upload the documents of there authorization while registration and then get a mail........
+
+- Need to set the map from where to take the food.
+- set the food status after aprove picked or not.
