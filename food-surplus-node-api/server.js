@@ -1,7 +1,10 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { sequelize } = require('./models');
+const { sequelize, FoodPost } = require('./models');
+const { Op } = require('sequelize');
 const helmet = require('helmet');
 const xss = require('xss-clean');
 const rateLimit = require('express-rate-limit');
@@ -14,7 +17,27 @@ const logger = require('./utils/logger');
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
 const PORT = process.env.PORT || 5000;
+
+// Attach io to req directly so routes can use it
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
+
+io.on('connection', (socket) => {
+    logger.info(`New client connected: ${socket.id}`);
+    socket.on('disconnect', () => {
+        logger.info(`Client disconnected: ${socket.id}`);
+    });
+});
 
 // HTTP Request Logging Middleware (Morgan -> Winston)
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms', {
@@ -100,8 +123,28 @@ sequelize.authenticate()
         return sequelize.sync({ force: false });
     })
     .then(() => {
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             logger.info(`Server running on port ${PORT}`);
+            
+            // Auto-Expire Food Posts that passed pickup time and no one accepted
+            setInterval(async () => {
+                try {
+                    const [updatedRows] = await FoodPost.update(
+                        { status: 'EXPIRED' },
+                        { 
+                            where: { 
+                                status: 'AVAILABLE', 
+                                pickupTime: { [Op.lt]: new Date() } 
+                            } 
+                        }
+                    );
+                    if (updatedRows > 0) {
+                        logger.info(`Expired ${updatedRows} food posts that passed pickup time without being claimed.`);
+                    }
+                } catch (err) {
+                    logger.error(`Error expiring food: ${err.message}`);
+                }
+            }, 60000); // Run check every 60 seconds
         });
     })
     .catch(err => {

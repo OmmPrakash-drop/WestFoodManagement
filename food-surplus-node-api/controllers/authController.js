@@ -1,4 +1,5 @@
 const { sequelize, User, Restaurant, NGO } = require('../models');
+const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/emailService');
@@ -11,12 +12,44 @@ exports.registerUser = async (req, res) => {
         const { username, password, email, contactNumber, role, address, registrationCertificate } = req.body;
         const documentUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-        // Check if user exists
-        // Note: We don't need the transaction here as it's a read operation
-        let user = await User.findOne({ where: { username } });
+        // Check if user exists by username or email
+        let user = await User.findOne({ 
+            where: { 
+                [Op.or]: [
+                    { username },
+                    { email }
+                ] 
+            } 
+        });
+
         if (user) {
             await t.rollback();
-            return res.status(400).json({ msg: 'User already exists' });
+            if (user.username === username) return res.status(400).json({ msg: 'A user with this name already exists' });
+            if (user.email === email) return res.status(400).json({ msg: 'This email is already in use' });
+        }
+
+        // Check if other critical details are duplicates in Restaurant or NGO tables
+        const duplicateConditions = [];
+        if (contactNumber) duplicateConditions.push({ contactNumber });
+        if (address) duplicateConditions.push({ address });
+        if (registrationCertificate) duplicateConditions.push({ registrationCertificate });
+
+        if (duplicateConditions.length > 0) {
+            const duplicateRestaurant = await Restaurant.findOne({ where: { [Op.or]: duplicateConditions } });
+            if (duplicateRestaurant) {
+                await t.rollback();
+                if (contactNumber && duplicateRestaurant.contactNumber === contactNumber) return res.status(400).json({ msg: 'Contact number already in use by a Restaurant' });
+                if (address && duplicateRestaurant.address === address) return res.status(400).json({ msg: 'Address already registered to a Restaurant' });
+                if (registrationCertificate && duplicateRestaurant.registrationCertificate === registrationCertificate) return res.status(400).json({ msg: 'Certificate ID already in use by a Restaurant' });
+            }
+
+            const duplicateNGO = await NGO.findOne({ where: { [Op.or]: duplicateConditions } });
+            if (duplicateNGO) {
+                await t.rollback();
+                if (contactNumber && duplicateNGO.contactNumber === contactNumber) return res.status(400).json({ msg: 'Contact number already in use by an NGO' });
+                if (address && duplicateNGO.address === address) return res.status(400).json({ msg: 'Address already registered to an NGO' });
+                if (registrationCertificate && duplicateNGO.registrationCertificate === registrationCertificate) return res.status(400).json({ msg: 'Certificate ID already in use by an NGO' });
+            }
         }
 
         // Hash password
@@ -188,5 +221,43 @@ exports.updateRegistration = async (req, res) => {
     } catch (err) {
         console.error('Update Registration Error:', err);
         res.status(500).send('Server Error: ' + err.message);
+    }
+};
+
+exports.checkDuplicates = async (req, res) => {
+    try {
+        const { email, contactNumber, username, password } = req.body;
+        
+        if (email) {
+            const user = await User.findOne({ where: { email } });
+            if (user) return res.status(400).json({ msg: 'This email is already in use' });
+        }
+        
+        if (contactNumber) {
+            const rest = await Restaurant.findOne({ where: { contactNumber } });
+            if (rest) return res.status(400).json({ msg: 'Contact number already in use by a Restaurant' });
+            
+            const ngo = await NGO.findOne({ where: { contactNumber } });
+            if (ngo) return res.status(400).json({ msg: 'Contact number already in use by an NGO' });
+        }
+        
+        if (username) {
+            const user = await User.findOne({ where: { username } });
+            if (user) return res.status(400).json({ msg: 'A user with this name already exists' });
+        }
+        
+        if (password) {
+            // Check all users' hashed passwords sequentially to guarantee uniqueness globally
+            const users = await User.findAll({ attributes: ['password'] });
+            for (let u of users) {
+                const isMatch = await bcrypt.compare(password, u.password);
+                if (isMatch) return res.status(400).json({ msg: 'This password is already taken, please use another password' });
+            }
+        }
+        
+        res.json({ msg: 'OK' });
+    } catch (err) {
+        console.error('Check Duplicates Error:', err);
+        res.status(500).json({ msg: 'Server error' });
     }
 };

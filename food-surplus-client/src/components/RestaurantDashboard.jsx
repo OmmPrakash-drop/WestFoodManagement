@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Clock, CheckCircle, Info } from 'lucide-react';
 import api from '../api';
 import ChangePassword from './ChangePassword';
 
@@ -8,40 +8,41 @@ export default function RestaurantDashboard() {
   const [quantity, setQuantity] = useState('');
   const [quantityUnit, setQuantityUnit] = useState('KG');
   const [pickupTime, setPickupTime] = useState('');
-  
+  const [showTimeInfo, setShowTimeInfo] = useState(false);
+
   const [myPosts, setMyPosts] = useState([]);
   const [requests, setRequests] = useState([]);
   const [profile, setProfile] = useState(null);
-  
+
   // Re-registration state
   const [updateForm, setUpdateForm] = useState({ address: '', registrationCertificate: '' });
   const [updateDoc, setUpdateDoc] = useState(null);
-  
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
   const fetchDashboardData = async () => {
     try {
       const userRes = await api.get('/auth/user');
       const restData = userRes.data?.Restaurant;
       setProfile(restData);
-      
+
       if (restData) {
-          setUpdateForm({ address: restData.address, registrationCertificate: restData.registrationCertificate });
+        setUpdateForm({ address: restData.address, registrationCertificate: restData.registrationCertificate });
       }
 
       if (restData?.verificationStatus === 'APPROVED') {
-          const postsRes = await api.get('/food-posts/my-posts');
-          setMyPosts(postsRes.data);
-          
-          const reqRes = await api.get('/food-requests/restaurant-requests');
-          setRequests(reqRes.data);
+        const postsRes = await api.get('/food-posts/my-posts');
+        setMyPosts(postsRes.data);
+
+        const reqRes = await api.get('/food-requests/restaurant-requests');
+        setRequests(reqRes.data);
       }
     } catch (err) {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   const handlePostFood = async (e) => {
     e.preventDefault();
@@ -72,7 +73,7 @@ export default function RestaurantDashboard() {
       formData.append('address', updateForm.address);
       formData.append('registrationCertificate', updateForm.registrationCertificate);
       if (updateDoc) formData.append('document', updateDoc);
-      
+
       await api.put('/auth/update-registration', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -91,55 +92,55 @@ export default function RestaurantDashboard() {
           {profile.verificationStatus === 'REVERTED' && <span style={{ color: '#f59e0b' }}>Action Required</span>}
           {profile.verificationStatus === 'REJECTED' && <span style={{ color: '#ef4444' }}>Application Rejected</span>}
         </h2>
-        
+
         {profile.verificationStatus === 'PENDING' && (
           <p style={{ color: 'var(--text-muted)' }}>We are reviewing your registration and documents. Please allow 24-48 hours. We will email you the moment you are approved!</p>
         )}
-        
+
         {profile.verificationStatus === 'REVERTED' && (
           <div>
-             <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>An admin has reviewed your application and requested further information before we can approve you.</p>
-             <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '8px', color: '#f59e0b', textAlign: 'left' }}>
-                 <strong style={{ display: 'block', marginBottom: '8px' }}>Admin Feedback:</strong> 
-                 {profile.adminMessage || 'Please update your details or reach out to support.'}
-             </div>
-             <p style={{ color: 'var(--text-muted)', marginTop: '24px', fontSize: '0.9rem' }}>Reply to the email we sent you or contact support with the requested details.</p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>An admin has reviewed your application and requested further information before we can approve you.</p>
+            <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '16px', borderRadius: '8px', color: '#f59e0b', textAlign: 'left' }}>
+              <strong style={{ display: 'block', marginBottom: '8px' }}>Admin Feedback:</strong>
+              {profile.adminMessage || 'Please update your details or reach out to support.'}
+            </div>
+            <p style={{ color: 'var(--text-muted)', marginTop: '24px', fontSize: '0.9rem' }}>Reply to the email we sent you or contact support with the requested details.</p>
           </div>
         )}
-        
+
         {profile.verificationStatus === 'REJECTED' && (
           <div>
             <p style={{ color: 'var(--text-muted)' }}>Unfortunately, your application could not be verified.</p>
             {profile.adminMessage && (
-               <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '16px', borderRadius: '8px', color: '#f87171', textAlign: 'left', marginTop: '16px' }}>
-                   <strong style={{ display: 'block', marginBottom: '8px' }}>Reason:</strong> 
-                   {profile.adminMessage}
-               </div>
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '16px', borderRadius: '8px', color: '#f87171', textAlign: 'left', marginTop: '16px' }}>
+                <strong style={{ display: 'block', marginBottom: '8px' }}>Reason:</strong>
+                {profile.adminMessage}
+              </div>
             )}
           </div>
         )}
 
         {/* Re-registration Form */}
         {(profile.verificationStatus === 'REVERTED' || profile.verificationStatus === 'REJECTED') && (
-            <div style={{ marginTop: '32px', textAlign: 'left', padding: '24px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-              <h3 style={{ marginBottom: '16px' }}>Update Application Details</h3>
-              <form onSubmit={handleUpdateRegistration}>
-                <div className="input-group">
-                  <label>Full Physical Address</label>
-                  <input required value={updateForm.address} onChange={e => setUpdateForm({...updateForm, address: e.target.value})} />
-                </div>
-                <div className="input-group">
-                  <label>Govt. Registration / Certificate ID</label>
-                  <input required value={updateForm.registrationCertificate} onChange={e => setUpdateForm({...updateForm, registrationCertificate: e.target.value})} />
-                </div>
-                <div className="input-group">
-                  <label>Update Certificate Document (PDF/Image)</label>
-                  <input type="file" accept=".pdf,image/*" onChange={e => setUpdateDoc(e.target.files[0])} style={{ padding: '8px', cursor: 'pointer' }} />
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>Leave blank to keep your original document.</p>
-                </div>
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }}>Re-Submit Application</button>
-              </form>
-            </div>
+          <div style={{ marginTop: '32px', textAlign: 'left', padding: '24px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <h3 style={{ marginBottom: '16px' }}>Update Application Details</h3>
+            <form onSubmit={handleUpdateRegistration}>
+              <div className="input-group">
+                <label>Full Physical Address</label>
+                <input required value={updateForm.address} onChange={e => setUpdateForm({ ...updateForm, address: e.target.value })} />
+              </div>
+              <div className="input-group">
+                <label>Govt. Registration / Certificate ID</label>
+                <input required value={updateForm.registrationCertificate} onChange={e => setUpdateForm({ ...updateForm, registrationCertificate: e.target.value })} />
+              </div>
+              <div className="input-group">
+                <label>Update Certificate Document (PDF/Image)</label>
+                <input type="file" accept=".pdf,image/*" onChange={e => setUpdateDoc(e.target.files[0])} style={{ padding: '8px', cursor: 'pointer' }} />
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>Leave blank to keep your original document.</p>
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }}>Re-Submit Application</button>
+            </form>
+          </div>
         )}
 
         <div style={{ marginTop: '32px' }}>
@@ -160,26 +161,43 @@ export default function RestaurantDashboard() {
           <form onSubmit={handlePostFood}>
             <div className="input-group">
               <label>Food Item Description</label>
-              <input required value={foodName} onChange={e=>setFoodName(e.target.value)} placeholder="e.g. 50 Loaves of Bread" />
+              <input required value={foodName} onChange={e => setFoodName(e.target.value)} placeholder="e.g. 50 Loaves of Bread" />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
-              <div className="input-group">
-                <label>Quantity</label>
-                <input required type="number" step="0.1" value={quantity} onChange={e=>setQuantity(e.target.value)} placeholder="0.0" />
-              </div>
-              <div className="input-group">
-                <label>Unit</label>
-                <select value={quantityUnit} onChange={e=>setQuantityUnit(e.target.value)}>
-                  <option>KG</option>
-                  <option>L</option>
-                  <option>Boxes</option>
-                  <option>Plates</option>
+            <div className="input-group">
+              <label>Quantity & Unit</label>
+              <div style={{ display: 'flex', width: '100%', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', alignItems: 'center' }}>
+                <input 
+                  required 
+                  type="number" 
+                  step="1" 
+                  value={quantity} 
+                  onChange={e => setQuantity(e.target.value)} 
+                  placeholder="0" 
+                  style={{ flex: '2', background: 'transparent', border: 'none', outline: 'none', padding: '12px', color: 'white', margin: 0 }} 
+                />
+                <select 
+                  value={quantityUnit} 
+                  onChange={e => setQuantityUnit(e.target.value)}
+                  style={{ flex: '1', background: 'rgba(0, 0, 0, 0.2)', border: 'none', borderLeft: '1px solid var(--border)', outline: 'none', padding: '12px', color: 'var(--text-main)', cursor: 'pointer', margin: 0 }}
+                >
+                  <option style={{ background: '#1e293b', color: 'white' }}>KG</option>
+                  <option style={{ background: '#1e293b', color: 'white' }}>L</option>
+                  <option style={{ background: '#1e293b', color: 'white' }}>Boxes</option>
+                  <option style={{ background: '#1e293b', color: 'white' }}>Plates</option>
                 </select>
               </div>
             </div>
             <div className="input-group">
-              <label>Available Pickup Time</label>
-              <input required type="datetime-local" value={pickupTime} onChange={e=>setPickupTime(e.target.value)} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                Available Pickup Time
+                <Info size={16} onClick={() => setShowTimeInfo(!showTimeInfo)} style={{ cursor: 'pointer', color: 'var(--accent)' }} />
+              </label>
+              {showTimeInfo && (
+                <div className="animate-fade-in" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', padding: '10px 14px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '12px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                  Choose expire time wisely, take 2-3hr of time in hand to deliver the food in a better quality, this is to protect the needy people not to get the expired food.
+                </div>
+              )}
+              <input required type="datetime-local" value={pickupTime} onChange={e => setPickupTime(e.target.value)} />
             </div>
             <button className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }}>Publish to NGOs</button>
           </form>
@@ -188,47 +206,47 @@ export default function RestaurantDashboard() {
 
       {/* Main Column: Requests and Active Posts */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        
+
         {/* Incoming NGO Requests */}
         <div className="glass-card">
           <h3 style={{ marginBottom: '16px' }}>Incoming NGO Requests</h3>
           {requests.length === 0 ? (
-             <p>No new requests from NGOs yet.</p>
+            <p>No new requests from NGOs yet.</p>
           ) : (
-             <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
-                {requests.map(req => (
-                  <div key={req.requestId} className="list-item">
-                    <div>
-                      <h4 style={{ color: 'var(--accent)' }}>{req.NGO ? req.NGO.ngoName : 'Unknown NGO'}</h4>
-                      <p style={{ fontSize: '0.9rem' }}>Requested your <strong>{req.FoodPost?.foodName}</strong></p>
-                      <div style={{ marginTop: '4px' }}>
-                        {req.requestStatus === 'PENDING' && <span className="badge badge-warning">Pending Review</span>}
-                        {req.requestStatus === 'APPROVED' && <span className="badge badge-success">Approved for Pickup</span>}
-                        {req.requestStatus === 'TAKEN' && <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>Food Taken (In Transit)</span>}
-                        {req.requestStatus === 'DELIVERED' && <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#059669' }}>Successfully Delivered</span>}
-                        {req.requestStatus === 'REJECTED' && <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>Rejected</span>}
-                      </div>
+            <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+              {requests.map(req => (
+                <div key={req.requestId} className="list-item">
+                  <div>
+                    <h4 style={{ color: 'var(--accent)' }}>{req.NGO ? req.NGO.ngoName : 'Unknown NGO'}</h4>
+                    <p style={{ fontSize: '0.9rem' }}>Requested your <strong>{req.FoodPost?.foodName}</strong></p>
+                    <div style={{ marginTop: '4px' }}>
+                      {req.requestStatus === 'PENDING' && <span className="badge badge-warning">Pending Review</span>}
+                      {req.requestStatus === 'APPROVED' && <span className="badge badge-success">Approved for Pickup</span>}
+                      {req.requestStatus === 'TAKEN' && <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>Food Taken (In Transit)</span>}
+                      {req.requestStatus === 'DELIVERED' && <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#059669' }}>Successfully Delivered</span>}
+                      {req.requestStatus === 'REJECTED' && <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>Rejected</span>}
                     </div>
-                    {req.requestStatus === 'PENDING' && (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn btn-outline" style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }} onClick={() => handleUpdateStatus(req.requestId, 'APPROVED')}>Approve</button>
-                        <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleUpdateStatus(req.requestId, 'REJECTED')}>Reject</button>
-                      </div>
-                    )}
                   </div>
-                ))}
-             </div>
+                  {req.requestStatus === 'PENDING' && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="btn btn-outline" style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }} onClick={() => handleUpdateStatus(req.requestId, 'APPROVED')}>Approve</button>
+                      <button className="btn btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleUpdateStatus(req.requestId, 'REJECTED')}>Reject</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
         {/* Your Active Listings */}
         <div className="glass-card">
           <h3 style={{ marginBottom: '16px' }}>Your Active Listings</h3>
-          {myPosts.length === 0 ? (
-             <p>You have not posted any food yet.</p>
+          {myPosts.filter(p => p.status !== 'EXPIRED').length === 0 ? (
+            <p>You have not posted any active food yet.</p>
           ) : (
             <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
-              {myPosts.map(post => (
+              {myPosts.filter(p => p.status !== 'EXPIRED').map(post => (
                 <div key={post.foodId} className="list-item">
                   <div>
                     <h4>{post.foodName}</h4>
@@ -236,7 +254,7 @@ export default function RestaurantDashboard() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={14} /> {new Date(post.pickupTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      <Clock size={14} /> {new Date(post.pickupTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                     <span style={{ fontSize: '0.8rem', fontWeight: 600, color: post.status === 'AVAILABLE' ? '#34d399' : '#94a3b8' }}>
                       {post.status}
@@ -247,6 +265,31 @@ export default function RestaurantDashboard() {
             </div>
           )}
         </div>
+
+        {/* Expired Listings */}
+        {myPosts.filter(p => p.status === 'EXPIRED').length > 0 && (
+          <div className="glass-card" style={{ opacity: 0.8 }}>
+            <h3 style={{ marginBottom: '16px', color: 'var(--text-muted)' }}>Expired Food History</h3>
+            <div style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', overflow: 'hidden' }}>
+              {myPosts.filter(p => p.status === 'EXPIRED').map(post => (
+                <div key={post.foodId} className="list-item" style={{ background: 'rgba(0,0,0,0.1)' }}>
+                  <div>
+                    <h4 style={{ color: 'var(--text-muted)' }}>{post.foodName}</h4>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{post.quantity} {post.quantityUnit}</p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={14} /> Expired at {new Date(post.pickupTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ef4444' }}>
+                      {post.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
 

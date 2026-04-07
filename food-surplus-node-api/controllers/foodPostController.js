@@ -1,6 +1,7 @@
 const FoodPost = require('../models/FoodPost');
 const Restaurant = require('../models/Restaurant');
 const catchAsync = require('../utils/catchAsync');
+const { Op } = require('sequelize');
 
 // @desc    Create a new food post
 // @route   POST /api/food-posts
@@ -34,6 +35,10 @@ exports.createFoodPost = async (req, res) => {
             status: 'AVAILABLE'
         });
 
+        if (req.io) {
+            req.io.emit('newFoodPost', newPost);
+        }
+
         console.log('Post created successfully:', newPost);
         res.json(newPost);
     } catch (err) {
@@ -53,7 +58,10 @@ exports.getAllFoodPosts = catchAsync(async (req, res, next) => {
 
     // 2. Query with findAndCountAll for large data sets
     const { count, rows } = await FoodPost.findAndCountAll({
-        where: { status: 'AVAILABLE' },
+        where: { 
+            status: 'AVAILABLE',
+            pickupTime: { [Op.gt]: new Date() }
+        },
         include: [
             {
                 model: Restaurant,

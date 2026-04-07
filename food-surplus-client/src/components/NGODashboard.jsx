@@ -12,10 +12,6 @@ export default function NGODashboard() {
   const [updateForm, setUpdateForm] = useState({ address: '', registrationCertificate: '' });
   const [updateDoc, setUpdateDoc] = useState(null);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
   const fetchDashboardData = async () => {
     try {
       const userRes = await api.get('/auth/user');
@@ -42,6 +38,10 @@ export default function NGODashboard() {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   const handleRequestFood = async (foodId) => {
     try {

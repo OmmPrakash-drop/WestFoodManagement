@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, UserX, UserCheck } from 'lucide-react';
+import { ShieldCheck, UserX, UserCheck, TrendingUp } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../api';
 import ChangePassword from './ChangePassword';
 
@@ -57,6 +58,17 @@ export default function AdminDashboard() {
 
   if (loading) return <div>Loading Admin Panel...</div>;
 
+  const COLORS = ['#10b981', '#f59e0b', '#ef4444'];
+  const pieData = [
+    { name: 'Pending Restaurants', value: restaurants.length },
+    { name: 'Pending NGOs', value: ngos.length }
+  ];
+
+  const barData = [
+    { name: 'Restaurants', Active: allRestaurants.filter(r => r.verificationStatus === 'APPROVED').length, Pending: allRestaurants.filter(r => r.verificationStatus === 'PENDING' || r.verificationStatus === 'REVERTED').length },
+    { name: 'NGOs', Active: allNgos.filter(n => n.verificationStatus === 'APPROVED').length, Pending: allNgos.filter(n => n.verificationStatus === 'PENDING' || n.verificationStatus === 'REVERTED').length }
+  ];
+
   return (
     <div className="animate-fade-in">
       <div style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(239, 68, 68, 0.1))', padding: '24px', borderRadius: '16px', border: '1px solid rgba(245, 158, 11, 0.2)', marginBottom: '32px' }}>
@@ -88,6 +100,17 @@ export default function AdminDashboard() {
           }}
         >
           Entity Database
+        </button>
+        <button 
+          className="btn" 
+          onClick={() => setActiveTab('stats')}
+          style={{ 
+            background: activeTab === 'stats' ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${activeTab === 'stats' ? '#8b5cf6' : 'var(--border)'}`,
+            color: 'white'
+          }}
+        >
+          Analytics & Reports
         </button>
       </div>
 
@@ -199,7 +222,7 @@ export default function AdminDashboard() {
           )}
         </div>
         </div>
-      ) : (
+      ) : activeTab === 'all' ? (
         <div className="glass-card animate-fade-in">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h3 style={{ color: 'var(--accent)' }}>System Entity Database</h3>
@@ -280,7 +303,57 @@ export default function AdminDashboard() {
           </div>
 
         </div>
-      )}
+      ) : activeTab === 'stats' ? (
+        <div className="glass-card animate-fade-in" style={{ padding: '32px' }}>
+          <h3 style={{ marginBottom: '24px', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrendingUp size={24} /> Network Statistics
+          </h3>
+          
+          <div className="dashboard-grid">
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+              <h4 style={{ marginBottom: '16px', textAlign: 'center' }}>Registration Status</h4>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="name" stroke="var(--text-muted)" />
+                    <YAxis stroke="var(--text-muted)" allowDecimals={false} />
+                    <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }} />
+                    <Legend />
+                    <Bar dataKey="Active" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Pending" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border)' }}>
+              <h4 style={{ marginBottom: '16px', textAlign: 'center' }}>Pending Workload</h4>
+              <div style={{ height: '300px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <ChangePassword />
     </div>

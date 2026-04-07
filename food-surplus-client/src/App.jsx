@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LogOut, LayoutDashboard } from 'lucide-react';
+import { Toaster, toast } from 'react-hot-toast';
+import { socket } from './socket';
 import Auth from './components/Auth';
 import AdminLogin from './components/AdminLogin';
 import RestaurantDashboard from './components/RestaurantDashboard';
@@ -29,6 +31,22 @@ export default function App() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    const handleNewPost = (post) => toast.success(`New Food Available: ${post.foodName}!`);
+    const handleNewRequest = () => toast('New food request received!', { icon: '👏' });
+    const handleRequestUpdate = (req) => toast(`Request status changed to ${req.requestStatus}`);
+
+    socket.on('newFoodPost', handleNewPost);
+    socket.on('newFoodRequest', handleNewRequest);
+    socket.on('requestStatusUpdated', handleRequestUpdate);
+
+    return () => {
+      socket.off('newFoodPost', handleNewPost);
+      socket.off('newFoodRequest', handleNewRequest);
+      socket.off('requestStatusUpdated', handleRequestUpdate);
+    };
+  }, []);
+
   const handleLogin = (data) => {
     localStorage.setItem('token', data.token);
     setUser(data.user);
@@ -43,6 +61,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-right" toastOptions={{ style: { background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border)' } }} />
       <div className="container">
         {/* Universal Navigation */}
         <nav className="nav-bar">

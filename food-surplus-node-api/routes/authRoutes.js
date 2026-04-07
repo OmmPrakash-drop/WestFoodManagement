@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, getUser, updateRegistration } = require('../controllers/authController');
+const { registerUser, loginUser, getUser, updateRegistration, checkDuplicates } = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { check } = require('express-validator');
 const upload = require('../middleware/upload');
+
+// @route   POST api/auth/check-duplicates
+// @desc    Check if registration details are already taken step-by-step
+// @access  Public
+router.post('/check-duplicates', checkDuplicates);
 
 // @route   POST api/auth/register
 // @desc    Register user

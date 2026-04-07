@@ -15,8 +15,23 @@ export default function Auth({ onLogin }) {
     e.preventDefault();
     setError('');
 
-    if (!isLogin && step < 3) {
-      setStep(step + 1);
+    if (!isLogin && step === 1) {
+      try {
+        await api.post('/auth/check-duplicates', { email: form.email, contactNumber: form.contactNumber });
+        setStep(2);
+      } catch (err) {
+        setError(err.response?.data?.msg || 'Error checking details');
+      }
+      return;
+    }
+
+    if (!isLogin && step === 2) {
+      try {
+        await api.post('/auth/check-duplicates', { username: form.username, password: form.password });
+        setStep(3);
+      } catch (err) {
+        setError(err.response?.data?.msg || 'Error checking credentials');
+      }
       return;
     }
     

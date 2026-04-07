@@ -26,11 +26,19 @@ exports.createFoodRequest = async (req, res) => {
             return res.status(400).json({ msg: 'Food is no longer available' });
         }
 
+        if (new Date(foodPost.pickupTime) < new Date()) {
+            return res.status(400).json({ msg: 'The pickup window for this food has already expired' });
+        }
+
         const request = await FoodRequest.create({
             foodId,
             ngoId: ngo.ngoId,
             requestStatus: 'PENDING'
         });
+
+        if (req.io) {
+            req.io.emit('newFoodRequest', request);
+        }
 
         res.json(request);
     } catch (err) {
@@ -160,6 +168,10 @@ exports.updateRequestStatus = async (req, res) => {
                 message: `Your request for ${request.FoodPost.foodName} has been ${status.toLowerCase()}.`,
                 isRead: false
             });
+        }
+
+        if (req.io) {
+            req.io.emit('requestStatusUpdated', request);
         }
 
         res.json(request);
